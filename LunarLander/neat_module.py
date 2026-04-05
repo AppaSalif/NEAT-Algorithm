@@ -35,10 +35,11 @@ class InnovationManager:
 
 # Node d'un réseau
 class Node:
-    def __init__(self, id, type):
+    def __init__(self, id, type, activation="sigmoid"):
         self.id = id            # unique node id
         self.type = type        # "input", "hidden", "output", "bias"
         self.value = 0.0        
+        self.activation = activation
 
 
 # Connexion entre deux nodes
@@ -157,7 +158,7 @@ class Genome:
         return sorted_nodes
 
 
-    def forward(self, input_vals, activation_func=sigmoid):
+    def forward(self, input_vals):
         input_nodes = sorted([n for n in self.nodes.values() if n.type=="input"], key=lambda x: x.id)
         bias_nodes = [n for n in self.nodes.values() if n.type=="bias"]
 
@@ -183,7 +184,12 @@ class Genome:
             node = self.nodes[n_id]
             
             if node.type not in ["input", "bias"]:
-                node.value = activation_func(node.value)
+                if node.activation == "sigmoid":
+                    node.value = sigmoid(node.value)
+                elif node.activation == "tanh":
+                    node.value = np.tanh(node.value)
+                elif node.activation == "relu":
+                    node.value = np.max(0, node.value)
             
             # Propager la valeur vers les nœuds suivants
             for conn in self.connections.values():
@@ -269,7 +275,7 @@ def neat_crossover(p1, p2):
     return child
 
 
-def apply_mutations(genome, innovation_manager):
+def apply_mutations(genome, innovation_manager): # You can play with the parameters and see what happens ;)
     if random.random() < 0.8: genome.mutate_weights(perturb_rate=0.8, step=0.5)
     if random.random() < 0.25: genome.mutate_add_connection(innovation_manager)
     if random.random() < 0.15: genome.mutate_add_node(innovation_manager)
