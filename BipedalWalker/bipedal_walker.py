@@ -1,4 +1,4 @@
-# lunar_lander.py
+# bipedal_walker.py
 
 import random
 import gymnasium as gym
@@ -19,7 +19,7 @@ def run(model, env, n_sim):
         truncated = False
         while not terminated and not truncated:
             action_values = model.forward(observation)
-            action = np.argmax(action_values)
+            action = np.clip(action_values, -1, 1)
             observation, reward, terminated, truncated, _ = env.step(action)
             all_rewards[idx_sim] += reward
         
@@ -27,37 +27,34 @@ def run(model, env, n_sim):
 
 #**********Test pour un génome aléatoire
 
-env = gym.make("LunarLander-v3")
 from gymnasium.wrappers import RecordVideo
+
 trigger = lambda t: t % 5 == 0
 env = gym.make(
-    "LunarLander-v3",
-    continuous = False,
-    gravity = -9.81,
-    enable_wind = False,
-    wind_power = 5.0,
-    turbulence_power = 1.5,
+    "BipedalWalker-v3",
+    hardcore = False,
     render_mode="rgb_array", # None for intensive simulation
 )
-env = RecordVideo(env, video_folder="./videos", episode_trigger=trigger,video_length=600, disable_logger=True)
-ann = random.choice(create_initial_population(10, 8, 4, inv_manager=InnovationManager()))
-score = run(ann, env, 5)
+env = RecordVideo(env, video_folder="./videos", name_prefix="random_bipedal_walker",episode_trigger=trigger,video_length=600, disable_logger=True)
+ann = random.choice(create_initial_population(10, 24, 4, inv_manager=InnovationManager()))
+score = run(ann,env,5)
 print(score)
 env.close()
 
+
 #**********Boucle principale d'entraînement
 
-def run_neat_lunar(generations=200, pop_size=100):
+def run_neat_bipedal_walker(generations=100, pop_size=80):
     manager = InnovationManager()
-    population = create_initial_population(pop_size, 8, 4, manager)
+    population = create_initial_population(pop_size, 24, 4, manager)
 
-    env = gym.make("LunarLander-v3")
+    env = gym.make("BipedalWalker-v3")
 
     for gen in range(generations):
 
         # 1. ÉVALUATION
         for genome in population:
-            genome.fitness = run(genome, env, n_sim=15)
+            genome.fitness = run(genome, env, n_sim=5)
 
         # 2. SPÉCIATION
         species_list = []
@@ -65,7 +62,7 @@ def run_neat_lunar(generations=200, pop_size=100):
         for genome in population:
             found = False
             for s in species_list:
-                if get_genetic_distance(genome, s.representative) < 0.6:
+                if get_genetic_distance(genome, s.representative) < 0.3:
                     s.add_member(genome)
                     found = True
                     break
@@ -81,7 +78,7 @@ def run_neat_lunar(generations=200, pop_size=100):
         best = max(population, key=lambda g: g.fitness)
         print(f"Gen {gen} | Best: {best.fitness:.2f} | Species: {len(species_list)}")
 
-        if np.mean([g.fitness for g in population]) > 200:
+        if best.fitness > 300:
             print("--- Solution trouvée ! ---")
             break
 
@@ -135,17 +132,12 @@ def run_neat_lunar(generations=200, pop_size=100):
 print("*************************")
 print("*********START***********")
 
-best_population = run_neat_lunar()
+best_population = run_neat_bipedal_walker()
 
 print("******Best Individual Test******")
 
 test_env = gym.make(
-    "LunarLander-v3",
-    continuous = False,
-    gravity = -10.0,
-    enable_wind = False,
-    wind_power = 5.0,
-    turbulence_power = 0.5,
+    "BipedalWalker-v3",
     render_mode="rgb_array",
     )
 
@@ -158,3 +150,4 @@ test_env.close()
 
 print("*********END***********")
 print("*************************")
+
